@@ -1,0 +1,123 @@
+/*--------------------------------------------------------------
+# Root Variables
+--------------------------------------------------------------*/
+
+/* Typography */
+:root {
+    --default-font: "Roboto", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", 
+                    Arial, "Noto Sans", "Liberation Sans", sans-serif, "Apple Color Emoji", 
+                    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    --heading-font: "Inter", sans-serif;
+    --nav-font: "Poppins", sans-serif;
+}
+
+/* Bootstrap Theme Colors */
+:root {
+  --bs-primary: #083e78;    /* Deep Blue for topbar */
+  --bs-primary-dark: #062d5a; /* Darker shade for topbar gradient */
+  --bs-secondary: #3a95b5;  /* Blue-Gray for main navigation */
+  --bs-secondary-dark: #405166; /* Darker shade for navigation gradient */
+  --bs-success: #28a745; /* Green for success messages/alerts */
+  --bs-info: #17a2b8; /* Lighter blue for info elements */
+  --bs-warning: #f8c14d; /* Soft yellow for warnings */
+  --bs-danger: #dc3545; /* Red for danger/alert */
+  --bs-light: #f8f9fa; /* Light gray for backgrounds and text contrast */
+  --bs-dark: #212529; /* Dark gray for footer, text, etc. */
+}
+
+/* Brand Colors */
+:root { 
+  /* Base Colors */
+  --background-color: #ffffff;
+  --default-color: #444444;
+  --heading-color: #083e78;
+  --accent-color: #3a95b5;
+  --surface-color: #ffffff;
+  --contrast-color: #ffffff;
+  
+  /* Navigation Colors */
+  --nav-color: var(--bs-light);
+  --nav-hover-color: var(--bs-warning);
+  --nav-mobile-background: var(--bs-light);
+  --nav-dropdown-background: var(--bs-light);
+  --nav-dropdown-color: var(--bs-dark);
+  --nav-dropdown-hover: var(--bs-secondary);
+}
+
+
+
+
+/*--------------------------------------------------------------
+# Global Styles
+--------------------------------------------------------------*/
+
+/* Smooth Scrolling */
+:root {
+    scroll-behavior: smooth;
+}
+
+/*--------------------------------------------------------------
+# Background Variants
+--------------------------------------------------------------*/
+
+.light-background {
+    --background-color: #f2f5f4;
+    --surface-color: #ffffff;
+}
+
+.dark-background {
+    --background-color: #0e1a18;
+    --default-color: #ffffff;
+    --heading-color: #ffffff;
+    --surface-color: #203b37;
+    --contrast-color: #ffffff;
+}
+
+/*--------------------------------------------------------------
+# Bootstrap Overrides
+--------------------------------------------------------------*/
+
+
+
+/* Buttons */
+.btn-primary {
+    background-color: var(--bs-primary) !important;
+    border-color: var(--bs-primary) !important;
+}
+
+.btn-primary:hover {
+    background-color: #8ba1b9 !important;
+    border-color: #0a58ca !important;
+}
+
+/* Alerts */
+.alert-primary {
+    background-color: var(--bs-primary) !important;
+    border-color: var(--bs-primary) !important;
+    color: white !important;
+}
+
+/* Text Utilities */
+.text-primary {
+    color: var(--bs-primary) !important;
+}
+
+/*--------------------------------------------------------------
+# Media Queries
+--------------------------------------------------------------*/
+
+@media (max-width: 991px) {
+    /* Add responsive styles here */
+}
+
+@media (max-width: 768px) {
+    /* Add mobile styles here */
+}
+
+/*--------------------------------------------------------------
+# Print Styles
+--------------------------------------------------------------*/
+
+@media print {
+    /* Add print styles if needed */
+}

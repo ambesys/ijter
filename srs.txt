@@ -1,0 +1,157 @@
+Detailed Requirement Specification for MVC-Based Academic Journal Management System
+1. Project Overview
+This system is an Academic Journal Management Platform designed using MVC architecture with the following technologies:
+•	Frontend: HTML, CSS, JavaScript (Bootstrap & SB Admin 2 UI framework)
+•	Backend: PHP
+•	Database: MySQL
+•	Security Features: Encryption, Secure Sessions, Role-Based Access Control, Token-Based API Access
+•	Public API: RESTful APIs for secure interaction
+2. Key Functional Modules
+(A) Public Website
+Features:
+•	Home Page
+o	Display the latest journal issue details
+o	Call-to-action (CTA) buttons for submissions, guidelines, and login
+•	About
+o	About -Information about journal, publications, indexig etc
+o	Policy
+•	Call for Papers
+o	Information on upcoming publication dates and submission deadlines
+o	Publish Book, Thesis, Dissertation, etc.
+•	Search Functionality
+o	Allow users to search for published research papers
+o	Search filters based on Author, Title, Keywords, and Publication Date
+•	Author Pages
+o	About -Information about journal, publications, indexig etc
+o	Research Areas (Display the domains covered by the journal)
+o	Link to Call-for papers
+o	Link to Submit-Paper (can be available pre-login and post-login)
+o	Publication Guidelines  (Details on submission, review, and publication policies)
+o	Publication Charges (Breakdown of submission, processing, DOI, and hardcopy charges)
+o	DOI Details
+•	Editorial Board
+o	Editorial Board Members (Display board members with details)
+o	Login for Editor (Navigate to common login)
+o	Login for Reviewer (Navigate to common login)
+o	Join our Editor/Review commitee
+
+•	Published Papers (we can combine, thesis and papers in single nav if we want)
+o	Current issue
+o	Past issues
+o	Conference
+o	Thesis
+o	Published Thesis
+	Current issue
+	Past issues
+	Conference
+	Thesis
+•	Downloads
+o	Sample Paper Format
+o	Undertaking Form (we can eventually make this as part of submit-paper terms checkbox integrated & auto generated within author dashboard after user submits with digital signature on it)
+o	Sample Certificate
+o	Sample Confirmation Letter
+o	Sample Hardcopy Covers
+•	Quick Links
+•	Contact Us
+o	Inquiry form with Google reCAPTCHA for spam protection
+
+
+(B) Author & Reviewer Dashboard (User Dashbooard)
+Author Features:
+1.	Dashboard
+o	Overview of submitted papers and statuses
+o	Graphical representation of review progress
+2.	Paper Submission
+o	Secure file upload for research papers
+o	Auto-generate Paper ID
+3.	Payment Status
+o	View and update payment details
+o	Payment gateway integration for online transactions
+4.	Document Submission
+o	Upload revised manuscripts, copyright forms, undertaking, ID proofs etc
+o	Show status if acknowledged by moderator or not.
+5.	Review Status & Publication Tracking
+o	Real-time tracking of review comments and final publication status
+6.	Download Documents (upon acceptance)
+o	Final published paper
+o	Certificate of publication (Auto-generated PDF)
+o	Journal cover pages
+o	Undertaking Form (Auto generated electronically singed PDF)
+7.	DOI & Hardcopy Requests
+o	Form-based request system
+o	Link to DOI if already assigned
+o	Request for DOI if do not have
+Reviewer Features:
+1.	Dashboard
+o	List of assigned papers with search
+o	Filters for pending/completed reviews (default show pending and resubmitted)
+2.	Review Submission
+o	Form-based review submission with comments
+o	Accept/Reject recommendation
+(C) Admin & Moderator Panel
+Admin Features:
+1.	Dashboard Overview
+o	Total submissions, accepted/rejected, pending reviews
+o	Recent activity logs
+2.	User Management
+o	Add/edit/delete users (Authors, Reviewers, Moderators, Admins)
+o	Role-based access control
+3.	Paper Management
+o	Assign reviewers
+o	Track and update paper status
+o	View submitted documents and review comments
+4.	Review Management
+o	Monitor reviewer activities and deadlines
+5.	Payment Management
+o	View payment history, pending payments
+6.	SEO & Journal Settings
+o	Update metadata, Google Analytics, social links
+7.	Issue & Publication Management
+o	Create new issues, assign papers to volumes
+3. System Architecture & Security
+
+Security Measures
+1.	Session Security
+o	Secure PHP session handling
+o	Auto session timeout and re-authentication
+2.	Password Encryption
+o	Hashing using bcrypt
+3.	CSRF & XSS Protection
+o	Token-based request validation
+4.	Role-Based Access Control (RBAC)
+o	Restricted access to dashboard sections
+5.	API Security
+o	Authentication with API keys & JWT tokens
+6.	.htaccess Optimization
+o	URL rewriting to hide .php extensions
+o	Restrict direct file access
+7.	Logging & Monitoring
+o	Admin panel logs of user actions
+
+4. UI/UX Design (SB Admin 2 Theme Integration)
+1.	Consistent UI Elements
+o	Bootstrap-powered responsive design
+o	Sidebar navigation for dashboards
+2.	Tables & Forms
+o	DataTables integration for sorting & searching
+o	Form validation & inline feedback messages
+3.	Graphical Elements
+o	Chart.js for paper status tracking
+4.	Alerts & Notifications
+o	Bootstrap alerts for feedback
+5. Database Schema (MySQL)
+- refer DB folder
+
+
+6. Deployment Considerations
+(A) Hosting Requirements
+•	Apache Server with PHP 8+
+•	MySQL Database
+•	SSL Certificate for secure transactions
+(B) Backup Strategy
+•	Automated database backups (daily)
+•	File system backup for uploads
+
+7. Conclusion
+This document serves as a comprehensive blueprint for developing the MVC-based Academic Journal Management System, ensuring all technical, security, and UI/UX aspects are covered effectively. Let me know if you need any refinements!
+
