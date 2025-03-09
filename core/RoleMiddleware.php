@@ -1,40 +1,32 @@
 <?php
 // core/RoleMiddleware.php
 
-class RoleMiddleware {
-    public static function requireRole($role) {
-        return function() use ($role) {
-            if (!isLoggedIn()) {
-                redirect('auth/login');
-                exit;
-            }
-
-            $user = auth()->user();
-            if (!($user->user_roles & $role)) {
-                $_SESSION['error'] = "You don't have permission to access this area.";
-                redirect('');
-                exit;
-            }
-        };
+function check_role($requiredRoles) {
+    if (!isset($_SESSION['user_roles'])) {
+        header('Location: ' . config('app.url') . 'login');
+        exit;
     }
 
-    public static function requireAnyRole(array $roles) {
-        return function() use ($roles) {
-            if (!isLoggedIn()) {
-                redirect('auth/login');
-                exit;
-            }
-
-            $user = auth()->user();
-            foreach ($roles as $role) {
-                if ($user->user_roles & $role) {
-                    return true;
-                }
-            }
-
-            $_SESSION['error'] = "You don't have permission to access this area.";
-            redirect('');
-            exit;
-        };
+    $userRoles = explode(',', $_SESSION['user_roles']);
+    
+    // If requiredRoles is a string, convert it to array
+    if (!is_array($requiredRoles)) {
+        $requiredRoles = [$requiredRoles];
     }
+
+    // Check if user has any of the required roles
+    $hasRole = false;
+    foreach ($requiredRoles as $role) {
+        if (in_array($role, $userRoles)) {
+            $hasRole = true;
+            break;
+        }
+    }
+
+    if (!$hasRole) {
+        header('Location: ' . config('app.url') . 'unauthorized');
+        exit;
+    }
+
+    return true;
 }

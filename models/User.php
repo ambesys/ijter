@@ -85,50 +85,71 @@ class User
         $stmt->execute([$userId]);
         return $stmt->fetch();
     }
-
     public function updateProfile($userId, $data)
     {
-        $sql = "UPDATE users SET
-                user_prefixname = :prefix,
-                user_fname = :fname,
-                user_mname = :mname,
-                user_lname = :lname,
-                user_designation = :designation,
-                user_institution = :institution,
-                user_mobile = :mobile,
-                user_address_line1 = :address1,
-                user_address_line2 = :address2,
-                user_city = :city,
-                user_state = :state,
-                user_country = :country,
-                user_pin_code = :pincode,
-                user_about_me = :about,
-                user_updated_at = CURRENT_TIMESTAMP
-                WHERE user_id = :user_id";
-
         try {
+            $sql = "UPDATE users SET
+        user_prefixname = :prefix,
+        user_fname = :fname,
+        user_mname = :mname,
+        user_lname = :lname,
+        user_designation = :designation,
+        user_institution = :institution,
+        user_mobile = :mobile,
+        user_countryCode = :countryCode,
+        user_address_line1 = :address1,
+        user_address_line2 = :address2,
+        user_city = :city,
+        user_state = :state,
+        user_country = :country,
+        user_pin_code = :pincode,
+        user_about_me = :about,
+        " . (isset($data['user_profile_image']) ? "user_profile_image = :profile_image," : "") . "
+        user_updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = :user_id";
+
             $stmt = $this->pdo->prepare($sql);
-            return $stmt->execute([
-                'prefix' => $data['prefixname'],
-                'fname' => $data['fname'],
-                'mname' => $data['mname'] ?? null,
-                'lname' => $data['lname'],
-                'designation' => $data['designation'] ?? null,
-                'institution' => $data['institution'],
-                'mobile' => $data['mobile'] ?? null,
-                'address1' => $data['address1'] ?? null,
-                'address2' => $data['address2'] ?? null,
-                'city' => $data['city'] ?? null,
-                'state' => $data['state'] ?? null,
-                'country' => $data['country'] ?? null,
-                'pincode' => $data['pincode'] ?? null,
-                'about' => $data['about_me'] ?? null,
+
+            $params = [
+                'prefix' => $data['user_prefixname'],
+                'fname' => $data['user_fname'],
+                'mname' => $data['user_mname'],
+                'lname' => $data['user_lname'],
+                'designation' => $data['user_designation'],
+                'institution' => $data['user_institution'],
+                'mobile' => $data['user_mobile'],
+                'countryCode' => $data['user_countryCode'],
+                'address1' => $data['user_address_line1'],
+                'address2' => $data['user_address_line2'],
+                'city' => $data['user_city'],
+                'state' => $data['user_state'],
+                'country' => $data['user_country'],
+                'pincode' => $data['user_pin_code'],
+                'about' => $data['user_about_me'],
                 'user_id' => $userId
-            ]);
+            ];
+
+            if (isset($data['user_profile_image'])) {
+                $params['profile_image'] = $data['user_profile_image'];
+            }
+
+            return $stmt->execute($params);
+
         } catch (PDOException $e) {
-            error_log($e->getMessage());
+            error_log("Database error in updateProfile: " . $e->getMessage());
             return false;
         }
+    }
+
+
+
+
+    public function getUserProfileImage($userId)
+    {
+        $sql = "SELECT user_profile_image FROM users WHERE user_id = ?";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$userId]);
+        return $stmt->fetchColumn();
     }
 
     public function updatePassword($userId, $newPasswordHash)
@@ -488,12 +509,13 @@ class User
         }
     }
 
-private function getUserBasicInfo($userId) {
-    try {
-        error_log('Welcome to getUserBasicInfo() - User ID: ' . $userId);
-        
-        // Prepare SQL with proper parameter binding
-        $sql = "SELECT 
+    private function getUserBasicInfo($userId)
+    {
+        try {
+            // error_log('Welcome to getUserBasicInfo() - User ID: ' . $userId);
+
+            // Prepare SQL with proper parameter binding
+            $sql = "SELECT 
                 user_id,
                 user_referral_id,
                 user_prefixname,
@@ -547,60 +569,65 @@ private function getUserBasicInfo($userId) {
             FROM users 
             WHERE user_id = :user_id";
 
-        $stmt = $this->pdo->prepare($sql);
-        
-        // Bind parameter explicitly
-        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-        
-        // Execute and fetch
-        if ($stmt->execute()) {
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            // Add some formatted fields
-            if ($result) {
-                // Format dates
-                $result['user_reg_date_formatted'] = date('F j, Y', strtotime($result['user_reg_date']));
-                $result['user_last_login_formatted'] = $result['user_last_login'] 
-                    ? date('F j, Y H:i:s', strtotime($result['user_last_login']))
-                    : 'Never';
-                
-                // Format verification status for display
-                $result['email_verified'] = $result['user_email_verified'] == 1;
-                $result['mobile_verified'] = $result['user_mobile_verified'] == 1;
-                
-                // Set default profile image if none exists
-                $result['profile_image_url'] = $result['user_profile_image'] 
-                    ? Helper::config('app.url') . 'uploads/profiles/' . $result['user_profile_image']
-                    : Helper::config('app.url') . 'assets/img/default-avatar.png';
-                
-                // Parse roles from bit flags
-                $result['roles_array'] = [];
-                if ($result['user_roles'] & self::ROLE_ADMIN) $result['roles_array'][] = 'Admin';
-                if ($result['user_roles'] & self::ROLE_MODERATOR) $result['roles_array'][] = 'Moderator';
-                if ($result['user_roles'] & self::ROLE_REVIEWER) $result['roles_array'][] = 'Reviewer';
-                if ($result['user_roles'] & self::ROLE_AUTHOR) $result['roles_array'][] = 'Author';
-                if ($result['user_roles'] & self::ROLE_SUBSCRIBER) $result['roles_array'][] = 'Subscriber';
+            $stmt = $this->pdo->prepare($sql);
+
+            // Bind parameter explicitly
+            $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+
+            // Execute and fetch
+            if ($stmt->execute()) {
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                // Add some formatted fields
+                if ($result) {
+                    // Format dates
+                    $result['user_reg_date_formatted'] = date('F j, Y', strtotime($result['user_reg_date']));
+                    $result['user_last_login_formatted'] = $result['user_last_login']
+                        ? date('F j, Y H:i:s', strtotime($result['user_last_login']))
+                        : 'Never';
+
+                    // Format verification status for display
+                    $result['email_verified'] = $result['user_email_verified'] == 1;
+                    $result['mobile_verified'] = $result['user_mobile_verified'] == 1;
+
+                    // Set default profile image if none exists
+                    $result['profile_image_url'] = $result['user_profile_image']
+                        ? Helper::config('app.url') . 'uploads/profiles/' . $result['user_profile_image']
+                        : Helper::config('app.url') . 'assets/img/default-avatar.png';
+
+                    // Parse roles from bit flags
+                    $result['roles_array'] = [];
+                    if ($result['user_roles'] & self::ROLE_ADMIN)
+                        $result['roles_array'][] = 'Admin';
+                    if ($result['user_roles'] & self::ROLE_MODERATOR)
+                        $result['roles_array'][] = 'Moderator';
+                    if ($result['user_roles'] & self::ROLE_REVIEWER)
+                        $result['roles_array'][] = 'Reviewer';
+                    if ($result['user_roles'] & self::ROLE_AUTHOR)
+                        $result['roles_array'][] = 'Author';
+                    if ($result['user_roles'] & self::ROLE_SUBSCRIBER)
+                        $result['roles_array'][] = 'Subscriber';
+                }
+
+                // Debug log
+                // error_log("Query result: " . print_r($result, true));
+
+                return $result;
+            } else {
+                error_log("Execute failed: " . print_r($stmt->errorInfo(), true));
+                return null;
             }
-            
-            // Debug log
-            error_log("Query result: " . print_r($result, true));
-            
-            return $result;
-        } else {
-            error_log("Execute failed: " . print_r($stmt->errorInfo(), true));
+
+        } catch (PDOException $e) {
+            error_log("PDO Error in getUserBasicInfo: " . $e->getMessage());
+            error_log("SQL: " . $sql);
+            error_log("User ID: " . $userId);
+            return null;
+        } catch (Exception $e) {
+            error_log("General Error in getUserBasicInfo: " . $e->getMessage());
             return null;
         }
-
-    } catch (PDOException $e) {
-        error_log("PDO Error in getUserBasicInfo: " . $e->getMessage());
-        error_log("SQL: " . $sql);
-        error_log("User ID: " . $userId);
-        return null;
-    } catch (Exception $e) {
-        error_log("General Error in getUserBasicInfo: " . $e->getMessage());
-        return null;
     }
-}
 
 
 
@@ -678,6 +705,81 @@ private function getUserBasicInfo($userId) {
             return [];
         }
     }
+
+    // In User.php model
+    public function storeEmailVerificationToken($userId, $token)
+    {
+        try {
+            $stmt = $this->pdo->prepare("
+            UPDATE users 
+            SET email_verification_token = :token, token_created_at = CURRENT_TIMESTAMP 
+            WHERE user_id = :userId
+        ");
+            return $stmt->execute([
+                'userId' => $userId,
+                'token' => $token
+            ]);
+        } catch (PDOException $e) {
+            error_log("Error storing email verification token: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function verifyEmailToken($token)
+    {
+        try {
+            $stmt = $this->pdo->prepare("
+            SELECT user_id FROM users 
+            WHERE email_verification_token = :token 
+            AND token_created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)
+            LIMIT 1
+        ");
+            $stmt->execute(['token' => $token]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            return $result ? $result['user_id'] : false;
+        } catch (PDOException $e) {
+            error_log("Error verifying email token: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function markEmailAsVerified($userId)
+    {
+        try {
+            $stmt = $this->pdo->prepare("
+            UPDATE users 
+            SET is_email_verified = 1, 
+                email_verification_token = NULL, 
+                token_created_at = NULL 
+            WHERE user_id = :userId
+        ");
+            return $stmt->execute(['userId' => $userId]);
+        } catch (PDOException $e) {
+            error_log("Error marking email as verified: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    // In User.php model
+    public function logActivity($userId, $action, $details = '')
+    {
+        try {
+            $stmt = $this->pdo->prepare("
+            INSERT INTO activity_logs (user_id, action, details, created_at)
+            VALUES (:userId, :action, :details, CURRENT_TIMESTAMP)
+        ");
+            return $stmt->execute([
+                'userId' => $userId,
+                'action' => $action,
+                'details' => $details
+            ]);
+        } catch (PDOException $e) {
+            error_log("Error logging activity: " . $e->getMessage());
+            return false;
+        }
+    }
+
 
     public function getPdo()
     {

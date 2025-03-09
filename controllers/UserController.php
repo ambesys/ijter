@@ -37,7 +37,7 @@ class UserController
         }
 
         // Debug log
-        error_log('User Details in Profile: ' . json_encode($userDetails));
+        // error_log('User Details in Profile: ' . json_encode($userDetails));
 
         echo Helper::view('users/profile', [
             'userDetails' => $userDetails,
@@ -59,89 +59,184 @@ class UserController
             'user' => $user
         ]);
     }
-
-    /**
-     * Process profile update
-     */
-    public function updateProfile()
-    {
-        requireLogin();
-        checkCSRF();
-
-        $userId = getCurrentUserId();
-        $user = $this->userModel->getUserById($userId);
-
-        $prefixName = $_POST['prefix_name'] ?? '';
-        $firstName = $_POST['first_name'] ?? '';
-        $middleName = $_POST['middle_name'] ?? '';
-        $lastName = $_POST['last_name'] ?? '';
-        $email = $_POST['email'] ?? '';
-        $phone = $_POST['phone'] ?? '';
-        $designation = $_POST['designation'] ?? '';
-        $institution = $_POST['institution'] ?? '';
-        $bio = $_POST['bio'] ?? '';
-
-        // Validate input
-        $errors = [];
-
-        if (empty($firstName)) {
-            $errors[] = 'First name is required';
+public function updateProfile()
+{
+    try {
+        if (!Helper::isLoggedIn()) {
+            throw new Exception('Please login to continue');
         }
 
-        if (empty($lastName)) {
-            $errors[] = 'Last name is required';
+        // Verify CSRF token
+        if (!isset($_POST['csrf_token']) || !Helper::verifyCsrfToken($_POST['csrf_token'])) {
+            throw new Exception('Invalid security token');
         }
 
-        if (empty($email)) {
-            $errors[] = 'Email is required';
-        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $errors[] = 'Invalid email format';
-        } elseif ($email !== $user['user_email'] && $this->userModel->emailExists($email, $userId)) {
-            $errors[] = 'Email already exists';
-        }
-
-        if (!empty($errors)) {
-            setFlashMessage('error', implode('<br>', $errors));
-            redirect(config('app.url') . 'users/edit-profile');
-            return;
-        }
-
-        // Update user
-        $userData = [
-            'user_prefixname' => $prefixName,
-            'user_fname' => $firstName,
-            'user_mname' => $middleName,
-            'user_lname' => $lastName,
-            'user_email' => $email,
-            'user_phone' => $phone,
-            'user_designation' => $designation,
-            'user_institution' => $institution,
-            'user_bio' => $bio
+        $userId = Helper::getCurrentUserId();
+        $data = [
+            'user_prefixname' => $_POST['user_prefixname'] ?? '',
+            'user_fname' => $_POST['user_fname'] ?? '',
+            'user_mname' => $_POST['user_mname'] ?? '',
+            'user_lname' => $_POST['user_lname'] ?? '',
+            'user_designation' => $_POST['user_designation'] ?? '',
+            'user_institution' => $_POST['user_institution'] ?? '',
+            'user_mobile' => $_POST['user_mobile'] ?? '',
+            'user_countryCode' => $_POST['user_countryCode'] ?? '',
+            'user_address_line1' => $_POST['user_address_line1'] ?? '',
+            'user_address_line2' => $_POST['user_address_line2'] ?? '',
+            'user_city' => $_POST['user_city'] ?? '',
+            'user_state' => $_POST['user_state'] ?? '',
+            'user_country' => $_POST['user_country'] ?? '',
+            'user_pin_code' => $_POST['user_pin_code'] ?? '',
+            'user_about_me' => $_POST['user_about_me'] ?? ''
         ];
 
-        $success = $this->userModel->updateUser($userId, $userData);
+        // Handle profile image upload
+        if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] === UPLOAD_ERR_OK) {
+            error_log("Processing profile image upload for user ID: " . $userId);
+            
+            // Get file extension
+            $fileInfo = pathinfo($_FILES['profile_image']['name']);
+            $extension = strtolower($fileInfo['extension']);
 
-        if (!$success) {
-            setFlashMessage('error', 'Failed to update profile');
-            redirect(config('app.url') . 'users/edit-profile');
-            return;
+            // Validate file type
+            $allowedTypes = ['jpg', 'jpeg', 'png'];
+            if (!in_array($extension, $allowedTypes)) {
+                throw new Exception('Invalid file type. Only JPG and PNG files are allowed.');
+            }
+
+            // Generate new filename
+            $newFileName = $userId . '_profile_image.' . $extension;
+            $uploadPath = ROOT_PATH . '/uploads/users/' . $newFileName;
+
+            error_log("Attempting to upload file to: " . $uploadPath);
+            error_log("Temp file location: " . $_FILES['profile_image']['tmp_name']);
+            error_log("File size: " . $_FILES['profile_image']['size']);
+
+            // Check if upload directory exists and is writable
+            $uploadDir = ROOT_PATH . '/uploads/users';
+            if (!is_writable($uploadDir)) {
+                error_log("Upload directory is not writable: " . $uploadDir);
+                throw new Exception('Upload directory is not writable');
+            }
+
+            // Remove old profile image if exists
+            $oldImage = $this->userModel->getUserProfileImage($userId);
+            if ($oldImage && file_exists($uploadDir . '/' . $oldImage)) {
+                unlink($uploadDir . '/' . $oldImage);
+                error_log("Removed old profile image: " . $oldImage);
+            }
+
+            // Move uploaded file
+            if (!move_uploaded_file($_FILES['profile_image']['tmp_name'], $uploadPath)) {
+                error_log("Failed to move uploaded file. Upload error code: " . $_FILES['profile_image']['error']);
+                error_log("PHP error: " . error_get_last()['message']);
+                throw new Exception('Failed to upload profile image');
+            }
+
+            error_log("File successfully uploaded to: " . $uploadPath);
+            $data['user_profile_image'] = $newFileName;
         }
 
-        // Update session variables if email changed
-        if ($email !== $user['user_email']) {
-            $_SESSION['user_email'] = $email;
+        // Update user profile
+        if ($this->userModel->updateProfile($userId, $data)) {
+            // Refresh user details in session
+            $userDetails = $this->userModel->getUserDetails($userId);
+            $_SESSION['user_details'] = $userDetails;
+
+            // Log activity
+            Helper::logActivity($userId, 'PROFILE_UPDATED', 'User profile updated successfully');
+
+            $_SESSION['flash_message'] = [
+                'type' => 'success',
+                'message' => 'Profile updated successfully'
+            ];
+        } else {
+            throw new Exception('Failed to update profile');
         }
 
-        // Log activity
-        $this->activityModel->log([
-            'activity_user_id' => $userId,
-            'activity_action' => 'profile_updated',
-            'activity_description' => 'Updated profile information'
-        ]);
+        header('Location: ' . Helper::config('app.url') . 'user/profile');
+        exit;
 
-        setFlashMessage('success', 'Profile updated successfully');
-        redirect(config('app.url') . 'users/profile');
+    } catch (Exception $e) {
+        error_log("Profile update error: " . $e->getMessage());
+        $_SESSION['flash_message'] = [
+            'type' => 'danger',
+            'message' => $e->getMessage()
+        ];
+        header('Location: ' . Helper::config('app.url') . 'user/profile');
+        exit;
     }
+}
+
+
+    public function changePassword()
+    {
+        try {
+            if (!Helper::isLoggedIn()) {
+                throw new Exception('Please login to continue');
+            }
+
+            if (!Helper::verifyCsrfToken()) {
+                throw new Exception('Invalid security token');
+            }
+
+            $userId = Helper::getCurrentUserId();
+            $currentPassword = $_POST['currentPassword'] ?? '';
+            $newPassword = $_POST['newPassword'] ?? '';
+            $confirmPassword = $_POST['renewPassword'] ?? '';
+
+            // Validate input
+            if (empty($currentPassword) || empty($newPassword) || empty($confirmPassword)) {
+                error_log('All password fields are required');
+                throw new Exception('All password fields are required');
+            }
+
+            if ($newPassword !== $confirmPassword) {
+                error_log('New passwords do not match');
+                throw new Exception('New passwords do not match');
+            }
+
+            // Get user details
+            $user = $this->userModel->findById($userId);
+            if (!$user) {
+                error_log('User not found');
+                throw new Exception('User not found');
+            }
+
+            // Verify current password
+            if (!password_verify($currentPassword, $user['user_password_hash'])) {
+                error_log('Current password is incorrect');
+                throw new Exception('Current password is incorrect');
+            }
+
+            // Update password
+            $newPasswordHash = password_hash($newPassword, PASSWORD_DEFAULT);
+            if ($this->userModel->updatePassword($userId, $newPasswordHash)) {
+                // Log activity
+                Helper::logActivity($userId, 'PASSWORD_CHANGED', 'Password changed successfully');
+
+                $_SESSION['flash_message'] = [
+                    'type' => 'success',
+                    'message' => 'Password changed successfully'
+                ];
+            } else {
+                
+                throw new Exception('Failed to update password');
+            }
+
+            header('Location: ' . Helper::config('app.url') . 'user/profile');
+            exit;
+
+        } catch (Exception $e) {
+            $_SESSION['flash_message'] = [
+                'type' => 'error',
+                'message' => $e->getMessage()
+            ];
+            header('Location: ' . Helper::config('app.url') . 'user/profile');
+            exit;
+        }
+    }
+
 
     /**
      * Display change password form
@@ -151,67 +246,6 @@ class UserController
         requireLogin();
 
         render('users/change_password');
-    }
-
-    /**
-     * Process password change
-     */
-    public function changePassword()
-    {
-        requireLogin();
-        checkCSRF();
-
-        $userId = getCurrentUserId();
-        $user = $this->userModel->getUserById($userId);
-
-        $currentPassword = $_POST['current_password'] ?? '';
-        $newPassword = $_POST['new_password'] ?? '';
-        $confirmPassword = $_POST['confirm_password'] ?? '';
-
-        // Validate input
-        $errors = [];
-
-        if (empty($currentPassword)) {
-            $errors[] = 'Current password is required';
-        } elseif (!password_verify($currentPassword, $user['user_password'])) {
-            $errors[] = 'Current password is incorrect';
-        }
-
-        if (empty($newPassword)) {
-            $errors[] = 'New password is required';
-        } elseif (strlen($newPassword) < 8) {
-            $errors[] = 'New password must be at least 8 characters long';
-        }
-
-        if ($newPassword !== $confirmPassword) {
-            $errors[] = 'Passwords do not match';
-        }
-
-        if (!empty($errors)) {
-            setFlashMessage('error', implode('<br>', $errors));
-            redirect(config('app.url') . 'users/change-password');
-            return;
-        }
-
-        // Update password
-        $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
-        $success = $this->userModel->updatePassword($userId, $hashedPassword);
-
-        if (!$success) {
-            setFlashMessage('error', 'Failed to change password');
-            redirect(config('app.url') . 'users/change-password');
-            return;
-        }
-
-        // Log activity
-        $this->activityModel->log([
-            'activity_user_id' => $userId,
-            'activity_action' => 'password_changed',
-            'activity_description' => 'Changed account password'
-        ]);
-
-        setFlashMessage('success', 'Password changed successfully');
-        redirect(config('app.url') . 'users/profile');
     }
 
     /**

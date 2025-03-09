@@ -1,48 +1,53 @@
-<?php
-// views/auth/verify_email.php
 
-$authTitle = 'Verify Email';
-$pageTitle = 'Verify Email | Research Journal';
 
-// Get journal details
-$journalModel = model('journal');
-$journalDetails = $journalModel->getJournalDetails();
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Verify Email</div>
+                <div class="card-body">
+                    <?php if (isset($_SESSION['error'])): ?>
+                        <div class="alert alert-danger">
+                            <?php echo $_SESSION['error']; unset($_SESSION['error']); ?>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <?php if (isset($_SESSION['success'])): ?>
+                        <div class="alert alert-success">
+                            <?php echo $_SESSION['success']; unset($_SESSION['success']); ?>
+                        </div>
+                    <?php endif; ?>
 
-// Start output buffering
-ob_start();
-?>
+                    <?php if (!$_SESSION['user_details']['basic_info']['user_email_verified']): ?>
+                        <div class="alert alert-warning">
+                            Your email is not verified. Please check your email for the verification link or request a new one below.
+                        </div>
+                        
+                        <form action="<?php echo config('app.url'); ?>resend-verification" method="POST">
+                            <input type="hidden" name="csrf_token" value="<?php echo generateCsrfToken(); ?>">
+                            <button type="submit" class="btn btn-primary">Resend Verification Email</button>
+                        </form>
 
-<div class="text-center mb-4">
-    <div class="mb-4">
-        <i class="fas fa-envelope fa-3x text-primary"></i>
+                        <hr>
+
+                        <form action="<?php echo config('app.url'); ?>verify-code" method="POST">
+                            <input type="hidden" name="csrf_token" value="<?php echo generateCsrfToken(); ?>">
+                            
+                            <div class="mb-3">
+                                <label for="verification_code" class="form-label">Verification Code</label>
+                                <input type="text" class="form-control" id="verification_code" name="verification_code" required>
+                                <div class="form-text">Enter the verification code sent to your email.</div>
+                            </div>
+
+                            <button type="submit" class="btn btn-success">Verify Code</button>
+                        </form>
+                    <?php else: ?>
+                        <div class="alert alert-success">
+                            Your email has been verified!
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
     </div>
-    <h5>Email Verification Required</h5>
-    <p>We've sent a verification email to your registered email address. Please check your inbox and click on the verification link to activate your account.</p>
-    <p>If you haven't received the email, you can request a new verification link below.</p>
 </div>
-
-<form action="<?= config('app.url') ?>auth/resend-verification" method="post">
-    <?= csrfField() ?>
-    
-    <div class="d-grid">
-        <button type="submit" class="btn btn-primary btn-lg">Resend Verification Email</button>
-    </div>
-</form>
-
-<?php
-$content = ob_get_clean();
-
-// Footer links
-ob_start();
-?>
-
-<div>
-    <a href="<?= config('app.url') ?>auth/login" class="text-decoration-none">Back to Login</a>
-</div>
-
-<?php
-$footer = ob_get_clean();
-
-// Include the layout
-include ROOT_PATH . '/views/layouts/auth.php';
-?>

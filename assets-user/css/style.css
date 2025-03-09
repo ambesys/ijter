@@ -1231,3 +1231,23 @@ h6 {
   font-size: 13px;
   color: #012970;
 }
+
+
+
+/*
+CUSTON CSS
+*/
+
+.scholar-stat {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.scholar-stat:last-child {
+  border-bottom: none;
+}
+
+.badge.rounded-pill {
+  font-size: 14px;
+  padding: 8px 12px;
+}

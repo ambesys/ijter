@@ -24,78 +24,79 @@ class AuthController
     }
 
 
-public function login() {
-    try {
-        // Validate CSRF token
-        if (!Helper::verifyCsrfToken($_POST['csrf_token'])) {
-            error_log('ELP001: Invalid CSRF token');
-            throw new Exception('ELP001: Invalid CSRF token');
-        }
+    public function login()
+    {
+        try {
+            // Validate CSRF token
+            if (!Helper::verifyCsrfToken($_POST['csrf_token'])) {
+                error_log('ELP001: Invalid CSRF token');
+                throw new Exception('ELP001: Invalid CSRF token');
+            }
 
-        // Validate input
-        $validator = new Validator($_POST, $this->pdo);
-        $rules = [
-            'email' => ['required', 'email'],
-            'password' => ['required'],
-            'captcha' => ['required']
-        ];
+            // Validate input
+            $validator = new Validator($_POST, $this->pdo);
+            $rules = [
+                'email' => ['required', 'email'],
+                'password' => ['required'],
+                'captcha' => ['required']
+            ];
 
-        if (!$validator->validate($rules)) {
-            $_SESSION['error'] = $validator->getFirstError();
-            $_SESSION['old'] = $_POST;
-            error_log('ELP002: Invalid Credentials - failure at validator');
+            if (!$validator->validate($rules)) {
+                $_SESSION['error'] = $validator->getFirstError();
+                $_SESSION['old'] = $_POST;
+                error_log('ELP002: Invalid Credentials - failure at validator');
+                header('Location: ' . config('app.url') . 'login');
+                exit;
+            }
+
+            // Check if the user exists
+            $stmt = $this->pdo->prepare("SELECT * FROM users WHERE user_email = :email");
+            $stmt->execute([':email' => $_POST['email']]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            // Debug information
+
+            if (!$user) {
+                error_log("ELP006: No user found with email: " . $_POST['email']);
+                throw new Exception('ELP006: Error #ERR0INC003: Invalid credentials');
+            }
+
+            // Verify password
+            if (!password_verify($_POST['password'], $user['user_password_hash'])) {
+                error_log("ELP007: Password verification failed for user: " . $_POST['email']);
+                throw new Exception('ELP007: Invalid credentials');
+            }
+
+            // If we get here, login is successful
+            $userModel = new User($this->pdo);
+            $userDetails = $userModel->getUserDetails($user['user_id']);
+            if (!$user['user_email_verified']) {
+                $_SESSION['warning'] = 'Please verify your email address to access all features.';
+            }
+
+            // Set session variables
+            $_SESSION['user_id'] = $user['user_id'];
+            $_SESSION['user_email'] = $user['user_email'];
+            $_SESSION['user_status'] = $user['user_status'];
+            $_SESSION['user_roles'] = $user['user_roles'];
+            $_SESSION['user_fname'] = $user['user_fname'];
+            $_SESSION['user_details'] = $userDetails;
+            $_SESSION['session_token'] = bin2hex(random_bytes(32));
+
+            // Update login info
+            // $userModel->updateLoginInfo($user['user_id']);
+
+            // Redirect to dashboard
+            header('Location: ' . config('app.url') . 'user/dashboard');
+            exit;
+
+        } catch (Exception $e) {
+            error_log('Login error: ' . $e->getMessage());
+            $_SESSION['error'] = $e->getMessage();
             header('Location: ' . config('app.url') . 'login');
             exit;
         }
-
-        // Check if the user exists
-        $stmt = $this->pdo->prepare("SELECT * FROM users WHERE user_email = :email");
-        $stmt->execute([':email' => $_POST['email']]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        // Debug information
-        error_log("ELP003: Login attempt for email: " . $_POST['email']);
-        error_log("ELP004: Password sent: " . $_POST['password']);
-        error_log("ELP005: Stored hash: " . ($user ? $user['user_password_hash'] : 'no user found'));
-
-        if (!$user) {
-            error_log("ELP006: No user found with email: " . $_POST['email']);
-            throw new Exception('ELP006: Error #ERR0INC003: Invalid credentials');
-        }
-
-        // Verify password
-        if (!password_verify($_POST['password'], $user['user_password_hash'])) {
-            error_log("ELP007: Password verification failed for user: " . $_POST['email']);
-            throw new Exception('ELP007: Invalid credentials');
-        }
-
-        // If we get here, login is successful
-        $userModel = new User($this->pdo);
-        $userDetails = $userModel->getUserDetails($user['user_id']);
-
-        // Set session variables
-        $_SESSION['user_id'] = $user['user_id'];
-        $_SESSION['user_email'] = $user['user_email'];
-        $_SESSION['user_status'] = $user['user_status'];
-        $_SESSION['user_roles'] = $user['user_roles'];
-        $_SESSION['user_fname'] = $user['user_fname'];
-        $_SESSION['user_details'] = $userDetails;
-        $_SESSION['session_token'] = bin2hex(random_bytes(32));
-
-        // Update login info
-        // $userModel->updateLoginInfo($user['user_id']);
-
-        // Redirect to dashboard
-        header('Location: ' . config('app.url') . 'user/dashboard');
-        exit;
-
-    } catch (Exception $e) {
-        error_log('Login error: ' . $e->getMessage());
-        $_SESSION['error'] = $e->getMessage();
-        header('Location: ' . config('app.url') . 'login');
-        exit;
     }
-}
 
 
 
@@ -144,28 +145,53 @@ public function login() {
             // Default role is author (assuming author role is represented by 1 in bit flag)
             $user_roles = 8;
 
-            // Insert user into the database
+            // Generate verification token
+            $verificationToken = bin2hex(random_bytes(32));
+
+            // Insert user with PENDING status
+            // Insert user with PENDING status
             $stmt = $this->pdo->prepare("
-                INSERT INTO users (
-                    user_referral_id, user_prefixname, user_fname, user_mname, user_lname, user_email, user_password_hash, user_roles, user_status
-                ) VALUES (
-                    :user_referral_id, :user_prefixname, :user_fname, :user_mname, :user_lname, :user_email, :user_password_hash, :user_roles, :user_status
-                )
-            ");
+            INSERT INTO users (
+                user_referral_id, user_prefixname, user_fname, user_mname, user_lname,
+                user_email, user_password_hash, user_roles, user_status,
+                user_reset_token, user_reset_token_expiry
+            ) VALUES (
+                :user_referral_id, :user_prefixname, :user_fname, :user_mname, :user_lname,
+                :user_email, :user_password_hash, :user_roles, 'PENDING',
+                :verification_token, DATE_ADD(NOW(), INTERVAL 24 HOUR)
+            )
+        ");
+
             $stmt->execute([
                 ':user_referral_id' => $user_referral_id,
-                ':user_prefixname' => $_POST['prefix_name'],
+                ':user_prefixname' => $_POST['prefix_name'] ?? null,
                 ':user_fname' => $_POST['first_name'],
-                ':user_mname' => $_POST['middle_name'],
+                ':user_mname' => $_POST['middle_name'] ?? null,
                 ':user_lname' => $_POST['last_name'],
                 ':user_email' => $_POST['email'],
                 ':user_password_hash' => $password_hash,
                 ':user_roles' => $user_roles,
-                ':user_status' => 'PENDING'
+                ':verification_token' => $verificationToken
             ]);
 
-            // If registration is successful
-            $_SESSION['success'] = 'Registration successful. Please check your email for confirmation.';
+
+            // Send verification email
+            $verificationLink = config('app.url') . 'verify-email?token=' . $verificationToken;
+            $verificationCode = substr($verificationToken, 0, 8); // Use first 8 characters as code
+
+            $to = $_POST['email'];
+            $subject = "Verify Your Email Address";
+            $message = "
+     <h2>Welcome to " . config('app.name') . "!</h2>
+     <p>Please click the link below to verify your email address:</p>
+     <p><a href='{$verificationLink}'>{$verificationLink}</a></p>
+     <p>Or enter this verification code on the website: <strong>{$verificationCode}</strong></p>
+     <p>This verification will expire in 24 hours.</p>
+ ";
+
+            send_email($to, $subject, $message);
+
+            $_SESSION['success'] = 'Registration successful! Please check your email to verify your account.';
             header('Location: ' . config('app.url') . 'login');
             exit;
         } catch (Exception $e) {
@@ -201,7 +227,7 @@ public function login() {
             $stmt->execute([':reviewer_id' => $_SESSION['user_id']]);
             $reviewPapers = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
-        
+
         error_log('AFTER IF ' . $_SESSION['user_id']);
 
         // If we get here, login is successful
@@ -569,6 +595,184 @@ public function login() {
                 break;
         }
     }
+
+
+    public function verifyEmail()
+    {
+        try {
+            $token = $_GET['token'] ?? '';
+
+            if (empty($token)) {
+                throw new Exception('Invalid verification token');
+            }
+
+            // Find user with this token
+            $stmt = $this->pdo->prepare("
+            SELECT user_id 
+            FROM users 
+            WHERE user_reset_token = ? 
+            AND user_reset_token_expiry > NOW()
+            AND user_email_verified = 0
+        ");
+            $stmt->execute([$token]);
+            $user = $stmt->fetch();
+
+            if (!$user) {
+                throw new Exception('Invalid or expired verification token');
+            }
+
+            // Update user status
+            $stmt = $this->pdo->prepare("
+            UPDATE users 
+            SET user_email_verified = 1,
+                user_reset_token = NULL,
+                user_reset_token_expiry = NULL,
+                user_status = CASE 
+                    WHEN user_status = 'PENDING' THEN 'ACTIVE'
+                    ELSE user_status
+                END
+            WHERE user_id = ?
+        ");
+            $stmt->execute([$user['user_id']]);
+
+            $_SESSION['success'] = 'Email verified successfully! You can now log in.';
+            header('Location: ' . config('app.url') . 'login');
+            exit;
+
+        } catch (Exception $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: ' . config('app.url') . 'login');
+            exit;
+        }
+    }
+
+    // In AuthController.php
+
+    // Add this method to your AuthController class
+    public function verifyEmailForm()
+    {
+        // Display the verification form
+        echo Helper::view('auth/verify_email');
+    }
+    public function resendVerification()
+    {
+        try {
+            if (!isset($_SESSION['user_id'])) {
+                throw new Exception('Please log in first');
+            }
+
+            // Get user details directly from database
+            $stmt = $this->pdo->prepare("
+            SELECT user_id, user_email, user_email_verified 
+            FROM users 
+            WHERE user_id = ?
+        ");
+            $stmt->execute([$_SESSION['user_id']]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$user) {
+                throw new Exception('User not found');
+            }
+
+            if ($user['user_email_verified']) {
+                throw new Exception('Email already verified');
+            }
+
+            // Generate verification token
+            $verificationToken = bin2hex(random_bytes(32));
+
+            // Update user's verification token
+            $stmt = $this->pdo->prepare("
+            UPDATE users 
+            SET user_reset_token = ?,
+                user_reset_token_expiry = DATE_ADD(NOW(), INTERVAL 24 HOUR)
+            WHERE user_id = ?
+        ");
+            $stmt->execute([$verificationToken, $_SESSION['user_id']]);
+
+            // Send new verification email
+            $verificationLink = config('app.url') . 'verify-email?token=' . $verificationToken;
+            $verificationCode = substr($verificationToken, 0, 8); // Use first 8 characters as code
+
+            $to = $user['user_email'];
+            $subject = "Verify Your Email Address";
+            $message = "
+            <h2>Email Verification</h2>
+            <p>Please click the link below to verify your email address:</p>
+            <p><a href='{$verificationLink}'>{$verificationLink}</a></p>
+            <p>Or enter this verification code on the website: <strong>{$verificationCode}</strong></p>
+            <p>This verification will expire in 24 hours.</p>
+        ";
+
+            send_email($to, $subject, $message);
+
+            $_SESSION['success'] = 'Verification email sent! Please check your inbox.';
+            header('Location: ' . config('app.url') . 'verify-email');
+            exit;
+
+        } catch (Exception $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: ' . config('app.url') . 'verify-email');
+            exit;
+        }
+    }
+
+
+    public function verifyCode()
+    {
+        try {
+            if (!isset($_SESSION['user_id'])) {
+                throw new Exception('Please log in first');
+            }
+
+            $code = $_POST['verification_code'] ?? '';
+            if (empty($code)) {
+                throw new Exception('Verification code is required');
+            }
+
+            // Verify the code
+            $stmt = $this->pdo->prepare("
+            SELECT user_id 
+            FROM users 
+            WHERE user_id = ? 
+            AND user_reset_token = ? 
+            AND user_reset_token_expiry > NOW()
+            AND user_email_verified = 0
+        ");
+            $stmt->execute([$_SESSION['user_id'], $code]);
+            $user = $stmt->fetch();
+
+            if (!$user) {
+                throw new Exception('Invalid or expired verification code');
+            }
+
+            // Update user status
+            $stmt = $this->pdo->prepare("
+            UPDATE users 
+            SET user_email_verified = 1,
+                user_reset_token = NULL,
+                user_reset_token_expiry = NULL,
+                user_status = CASE 
+                    WHEN user_status = 'PENDING' THEN 'ACTIVE'
+                    ELSE user_status
+                END
+            WHERE user_id = ?
+        ");
+            $stmt->execute([$user['user_id']]);
+
+            $_SESSION['success'] = 'Email verified successfully!';
+            header('Location: ' . config('app.url') . 'dashboard');
+            exit;
+
+        } catch (Exception $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: ' . config('app.url') . 'verify-email');
+            exit;
+        }
+    }
+
+
+
 }
 
 

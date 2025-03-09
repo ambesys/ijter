@@ -17,6 +17,7 @@ if ($basePath !== '/' && strpos($uri, $basePath) === 0) {
     $uri = substr($uri, strlen($basePath));
 }
 
+
 // Normalize the path
 $path = '/' . trim($uri, '/');
 
@@ -69,8 +70,16 @@ $router->get('/user', [$controllers['auth'], 'dashboard']);
 $router->get('/user/dashboard', [$controllers['auth'], 'dashboard']);
 $router->get('/user/profile', [$controllers['user'], 'profile']);
 $router->post('/user/profile', [$controllers['user'], 'updateProfile']);
+$router->post('/user/profile/change-password', [$controllers['user'], 'changePassword']);
 $router->get('/user/papers', [$controllers['user'], 'papers']);
 $router->get('/user/reviews', [$controllers['user'], 'reviews']);
+
+// In routes.php or similar
+$router->get('/verify-email',[$controllers['auth'], 'verifyEmailForm']);
+$router->get('/verify-email/token',[$controllers['auth'], 'verifyEmail']);
+$router->post('/verify-code',[$controllers['auth'], 'verifyCode']);
+$router->post('/resend-verification',[$controllers['auth'], 'resendVerification']);
+
 
 // Paper routes (moved under user for authenticated actions)
 $router->get('/user/paper/submit', [$controllers['paper'], 'submitForm']);

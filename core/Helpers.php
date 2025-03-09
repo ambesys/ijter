@@ -82,6 +82,14 @@ class Helper
         return ob_get_clean();
     }
 
+    function generateCsrfToken() {
+        if (!isset($_SESSION['csrf_token'])) {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        }
+        
+        return $_SESSION['csrf_token'];
+    }
+
     /**
      * Generate CSRF token field
      */
@@ -305,6 +313,131 @@ class Helper
         }
     }
 
+    // Add this to core/Helpers.php
 
-
+public static function getCountryCodes()
+{
+    return [
+        '1' => 'USA/Canada',
+        '44' => 'UK',
+        '91' => 'India',
+        '61' => 'Australia',
+        '64' => 'New Zealand',
+        '86' => 'China',
+        '81' => 'Japan',
+        '82' => 'South Korea',
+        '65' => 'Singapore',
+        '60' => 'Malaysia',
+        '49' => 'Germany',
+        '33' => 'France',
+        '39' => 'Italy',
+        '34' => 'Spain',
+        '31' => 'Netherlands',
+        '46' => 'Sweden',
+        '47' => 'Norway',
+        '45' => 'Denmark',
+        '41' => 'Switzerland',
+        '43' => 'Austria',
+        '32' => 'Belgium',
+        '351' => 'Portugal',
+        '353' => 'Ireland',
+        '358' => 'Finland',
+        '48' => 'Poland',
+        '420' => 'Czech Republic',
+        '36' => 'Hungary',
+        '30' => 'Greece',
+        '7' => 'Russia',
+        '380' => 'Ukraine',
+        '971' => 'UAE',
+        '966' => 'Saudi Arabia',
+        '20' => 'Egypt',
+        '27' => 'South Africa',
+        '234' => 'Nigeria',
+        '254' => 'Kenya',
+        '55' => 'Brazil',
+        '52' => 'Mexico',
+        '54' => 'Argentina',
+        '56' => 'Chile',
+        '57' => 'Colombia',
+        '51' => 'Peru',
+        '58' => 'Venezuela'
+    ];
 }
+
+public static function getCountries()
+{
+    return [
+        'US' => 'United States',
+        'GB' => 'United Kingdom',
+        'IN' => 'India',
+        'AU' => 'Australia',
+        'NZ' => 'New Zealand',
+        'CN' => 'China',
+        'JP' => 'Japan',
+        'KR' => 'South Korea',
+        'SG' => 'Singapore',
+        'MY' => 'Malaysia',
+        'DE' => 'Germany',
+        'FR' => 'France',
+        'IT' => 'Italy',
+        'ES' => 'Spain',
+        'NL' => 'Netherlands',
+        'SE' => 'Sweden',
+        'NO' => 'Norway',
+        'DK' => 'Denmark',
+        'CH' => 'Switzerland',
+        'AT' => 'Austria',
+        'BE' => 'Belgium',
+        'PT' => 'Portugal',
+        'IE' => 'Ireland',
+        'FI' => 'Finland',
+        'PL' => 'Poland',
+        'CZ' => 'Czech Republic',
+        'HU' => 'Hungary',
+        'GR' => 'Greece',
+        'RU' => 'Russia',
+        'UA' => 'Ukraine',
+        'AE' => 'United Arab Emirates',
+        'SA' => 'Saudi Arabia',
+        'EG' => 'Egypt',
+        'ZA' => 'South Africa',
+        'NG' => 'Nigeria',
+        'KE' => 'Kenya',
+        'BR' => 'Brazil',
+        'MX' => 'Mexico',
+        'AR' => 'Argentina',
+        'CL' => 'Chile',
+        'CO' => 'Colombia',
+        'PE' => 'Peru',
+        'VE' => 'Venezuela'
+    ];
+}
+
+
+    public static function setFlash($type, $message) {
+        if (!isset($_SESSION['flash'])) {
+            $_SESSION['flash'] = [];
+        }
+        $_SESSION['flash'][] = [
+            'type' => $type,
+            'message' => $message
+        ];
+    }
+
+    public static function displayFlash() {
+        if (!isset($_SESSION['flash'])) {
+            return;
+        }
+
+        foreach ($_SESSION['flash'] as $flash) {
+            echo '<div class="alert alert-' . $flash['type'] . ' alert-dismissible fade show" role="alert">
+                    ' . $flash['message'] . '
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                  </div>';
+        }
+
+        // Clear flash messages after displaying
+        unset($_SESSION['flash']);
+    }
+}
+

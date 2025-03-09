@@ -53,8 +53,7 @@ require_once ROOT_PATH . '/core/RoleMiddleware.php';
 require_once ROOT_PATH . '/core/Helpers.php';
 require_once ROOT_PATH . '/core/Validator.php';
 require_once ROOT_PATH . '/core/Cache.php';
-
-
+require_once ROOT_PATH . '/core/Mailer.php';
 
 
 // Start session

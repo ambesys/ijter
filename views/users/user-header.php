@@ -176,7 +176,10 @@ $basicInfo = $userDetails['basic_info'] ?? [];
     <li class="nav-item dropdown pe-3">
 
       <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
-        <img src="<?= Helper::config('app.url') ?>assets-user/img/profile-img.jpg" alt="Profile" class="rounded-circle">
+        <img src="<?= Helper::config('app.url') ?>uploads/users/<?= !empty($basicInfo['user_profile_image']) 
+    ? $basicInfo['user_profile_image'] 
+    : 'user-profile-image.jpg' ?>" 
+    alt="Profile" class="rounded-circle">
         <span
           class="d-none d-md-block dropdown-toggle ps-2"><?php echo $basicInfo['user_fname'] ?></span>
       </a><!-- End Profile Iamge Icon -->
